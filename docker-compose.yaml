@@ -1,0 +1,49 @@
+version: "3.9"
+
+services:
+  lcp-server:
+    build:
+      context: ./lcp-server
+      dockerfile: Dockerfile
+    image: simplecdl/lcp-server:local
+    environment:
+      - LCPSERVER_CONFIG=/config/lcp.yaml
+    volumes:
+      - type: bind
+        source: ${PWD}/lcp-server/lcp.yaml
+        target: /config/lcp.yaml
+        read_only: true
+      - type: bind
+        source: ${PWD}/lcp-server/pkg/test/cert
+        target: /certs
+        read_only: true
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+    networks:
+      - internal_net
+
+  asset-encrypter:
+    build:
+      context: ./asset-encrypter
+      dockerfile: Dockerfile
+    image: simplecdl/asset-encrypter:local
+    environment:
+      - WATCH_DIR=/assets
+      - ENCRYPTED_DIR=/assets-encrypted
+      - LCP_SERVER_URL=http://lcp-server:8081
+    volumes:
+      - assets-data:/assets
+      - assets-encrypted:/assets-encrypted
+      - ./asset-encrypter/config:/etc/asset-encrypter:ro
+    restart: unless-stopped
+    networks:
+      - internal_net
+
+volumes:
+  assets-data:
+  assets-encrypted:
+
+networks:
+  internal_net:
+    internal: true
